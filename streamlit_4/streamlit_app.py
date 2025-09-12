@@ -2,15 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import json
-import pickle
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.ensemble import RandomForestClassifier
 import joblib
 import tensorflow as tf
 from tensorflow import keras
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -444,16 +439,10 @@ def main():
             st.metric("Exam Boards", len(data['boards']))
             st.metric("Subjects", len(data['subject_columns']))
         
-        # Show field distribution
+        # Show field distribution using Streamlit native chart
         st.subheader("Field Distribution")
-        fig_dist = px.bar(
-            x=data['field_counts'].values[:10], 
-            y=data['field_counts'].index[:10],
-            orientation='h',
-            title="Top 10 Fields by Enrollment"
-        )
-        fig_dist.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig_dist, use_container_width=True)
+        top_10_fields = data['field_counts'].head(10)
+        st.bar_chart(top_10_fields)
         
         # Show combination-subject mapping in sidebar
         st.subheader("📋 Curriculum Structure")
@@ -639,21 +628,16 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
             
-            # Visualization of recommendations
+            # Visualization of recommendations using Streamlit native chart
             if len(recommendations) > 1:
-                fields = [rec[0][:30] + "..." if len(rec[0]) > 30 else rec[0] for rec in recommendations]
+                fields = [rec[0][:20] + "..." if len(rec[0]) > 20 else rec[0] for rec in recommendations]
                 confidences = [rec[1] * 100 for rec in recommendations]
                 
-                fig = px.bar(
-                    x=confidences,
-                    y=fields,
-                    orientation='h',
-                    title="Recommendation Confidence Scores",
-                    color=confidences,
-                    color_continuous_scale="viridis"
-                )
-                fig.update_layout(height=300, showlegend=False)
-                st.plotly_chart(fig, use_container_width=True)
+                chart_data = pd.DataFrame({
+                    'Field': fields,
+                    'Confidence': confidences
+                })
+                st.bar_chart(chart_data.set_index('Field'))
         
         else:
             st.info("👆 Complete the form above to get your personalized field recommendations!")

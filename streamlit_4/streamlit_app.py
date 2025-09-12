@@ -68,18 +68,18 @@ def load_model():
             model_type = 'neural_network'
         except:
             # Fall back to tree-based model
-            model = joblib.load('subject_scaler.pkl')
+            model = joblib.load('../field_recommendation_model.pkl')
             model_type = 'random_forest' if hasattr(model, 'n_estimators') else 'decision_tree'
         
         # Load preprocessing objects
-        subject_scaler = joblib.load('subject_scaler.pkl')
-        field_encoder = joblib.load('field_encoder.pkl')
-        board_encoder = joblib.load('board_encoder.pkl')
-        combination_encoder = joblib.load('combination_encoder.pkl')
-        board_ohe = joblib.load('board_ohe.pkl')
-        combination_ohe = joblib.load('combination_ohe.pkl')
-        subject_columns = joblib.load('subject_columns.pkl')
-        
+        subject_scaler = joblib.load('../subject_scaler.pkl')
+        field_encoder = joblib.load('../field_encoder.pkl')
+        board_encoder = joblib.load('../board_encoder.pkl')
+        combination_encoder = joblib.load('../combination_encoder.pkl')
+        board_ohe = joblib.load('../board_ohe.pkl')
+        combination_ohe = joblib.load('../combination_ohe.pkl')
+        subject_columns = joblib.load('../subject_columns.pkl')
+
         return {
             'model': model,
             'model_type': model_type,

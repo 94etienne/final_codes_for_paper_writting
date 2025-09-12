@@ -68,7 +68,7 @@ def load_model():
             model_type = 'neural_network'
         except:
             # Fall back to tree-based model
-            model = joblib.load('field_recommendation_model.pkl')
+            model = joblib.load('field_recommendation_model.h5')
             model_type = 'random_forest' if hasattr(model, 'n_estimators') else 'decision_tree'
         
         # Load preprocessing objects

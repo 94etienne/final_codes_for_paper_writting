@@ -1,0 +1,14 @@
+echo "# final_codes_for_paper_writting" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/94etienne/final_codes_for_paper_writting.git
+git push -u origin main
+
+
+
+
+git remote add origin https://github.com/94etienne/final_codes_for_paper_writting.git
+git branch -M main
+git push -u origin main

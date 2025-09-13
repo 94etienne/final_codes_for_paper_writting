@@ -6,6 +6,8 @@ import joblib
 import tensorflow as tf
 from tensorflow import keras
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+import os
+from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -62,34 +64,45 @@ st.markdown("""
 def load_model():
     """Load the pre-trained model and preprocessing objects"""
     try:
-        # Try to load the neural network model first
-        try:
-            model = keras.models.load_model('field_recommendation_model.h5')
-            model_type = 'neural_network'
-        except:
-            # Fall back to tree-based model
-            model = joblib.load('field_recommendation_model.pkl')
-            model_type = 'random_forest' if hasattr(model, 'n_estimators') else 'decision_tree'
+        # Try to load the neural network model
+        model_path = 'field_recommendation_model.h5'
+        
+        if not os.path.exists(model_path):
+            st.error(f"Model file not found: {model_path}")
+            st.info("Please ensure the model file is uploaded to the server")
+            return None
+            
+        model = keras.models.load_model(model_path)
+        model_type = 'neural_network'
         
         # Load preprocessing objects
-        subject_scaler = joblib.load('subject_scaler.pkl')
-        field_encoder = joblib.load('field_encoder.pkl')
-        board_encoder = joblib.load('board_encoder.pkl')
-        combination_encoder = joblib.load('combination_encoder.pkl')
-        board_ohe = joblib.load('board_ohe.pkl')
-        combination_ohe = joblib.load('combination_ohe.pkl')
-        subject_columns = joblib.load('subject_columns.pkl')
+        required_files = {
+            'subject_scaler': 'subject_scaler.pkl',
+            'field_encoder': 'field_encoder.pkl',
+            'board_encoder': 'board_encoder.pkl',
+            'combination_encoder': 'combination_encoder.pkl',
+            'board_ohe': 'board_ohe.pkl',
+            'combination_ohe': 'combination_ohe.pkl',
+            'subject_columns': 'subject_columns.pkl'
+        }
+        
+        loaded_objects = {}
+        for name, filename in required_files.items():
+            if not os.path.exists(filename):
+                st.error(f"Required file not found: {filename}")
+                return None
+            loaded_objects[name] = joblib.load(filename)
         
         return {
             'model': model,
             'model_type': model_type,
-            'subject_scaler': subject_scaler,
-            'field_encoder': field_encoder,
-            'board_encoder': board_encoder,
-            'combination_encoder': combination_encoder,
-            'board_ohe': board_ohe,
-            'combination_ohe': combination_ohe,
-            'subject_columns': subject_columns
+            'subject_scaler': loaded_objects['subject_scaler'],
+            'field_encoder': loaded_objects['field_encoder'],
+            'board_encoder': loaded_objects['board_encoder'],
+            'combination_encoder': loaded_objects['combination_encoder'],
+            'board_ohe': loaded_objects['board_ohe'],
+            'combination_ohe': loaded_objects['combination_ohe'],
+            'subject_columns': loaded_objects['subject_columns']
         }
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
@@ -159,21 +172,12 @@ class FieldRecommendationSystem:
             prediction = self.model.predict(combined_features, verbose=0)
             predicted_class = np.argmax(prediction)
             confidence = prediction[0][predicted_class]
-        else:  # tree-based models
-            prediction = self.model.predict_proba(combined_features)
-            predicted_class = np.argmax(prediction)
-            confidence = prediction[0][predicted_class]
         
         field_name = self.field_encoder.inverse_transform([predicted_class])[0]
         
         # Get top 3 predictions with confidence scores
         if self.model_type == 'neural_network':
             all_predictions = self.model.predict(combined_features, verbose=0)[0]
-            top_3_indices = np.argsort(all_predictions)[-3:][::-1]
-            top_3_fields = self.field_encoder.inverse_transform(top_3_indices)
-            top_3_confidences = all_predictions[top_3_indices]
-        else:
-            all_predictions = self.model.predict_proba(combined_features)[0]
             top_3_indices = np.argsort(all_predictions)[-3:][::-1]
             top_3_fields = self.field_encoder.inverse_transform(top_3_indices)
             top_3_confidences = all_predictions[top_3_indices]
@@ -199,10 +203,23 @@ class FieldRecommendationSystem:
 def load_data():
     """Load and prepare the dataset"""
     try:
-        df = pd.read_json("../dataset/rp_merged_dataset_cleaned_marks_to_80_where_was_1.json")
-        return df
-    except FileNotFoundError:
+        # Try multiple possible paths
+        possible_paths = [
+            "dataset/rp_merged_dataset_cleaned_marks_to_80_where_was_1.json",
+            "../dataset/rp_merged_dataset_cleaned_marks_to_80_where_was_1.json",
+            "./rp_merged_dataset_cleaned_marks_to_80_where_was_1.json"
+        ]
+        
+        for path in possible_paths:
+            try:
+                df = pd.read_json(path)
+                st.success(f"Successfully loaded dataset from: {path}")
+                return df
+            except FileNotFoundError:
+                continue
+        
         st.error("Dataset file not found. Please ensure the JSON file is in the correct location.")
+        st.info("Tried paths: " + ", ".join(possible_paths))
         return None
     except Exception as e:
         st.error(f"Error loading dataset: {str(e)}")
@@ -389,6 +406,7 @@ def main():
                 st.session_state.model_loaded = True
             else:
                 st.error("Failed to load the pre-trained model. Please ensure all model files are available.")
+                st.info("Required files: field_recommendation_model.h5, subject_scaler.pkl, field_encoder.pkl, board_encoder.pkl, combination_encoder.pkl, board_ohe.pkl, combination_ohe.pkl, subject_columns.pkl")
                 st.stop()
 
     # Load data only once
